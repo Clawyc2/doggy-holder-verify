@@ -7,11 +7,17 @@ import { PublicKey } from "@solana/web3.js";
 
 const DOGGY_MINT = 'BS7HxRitaY5ipGfbek1nmatWLbaS9yoWRSEQzCb3pump';
 
-const ROLES = [
+const HOLDER_ROLES = [
   { name: 'Camaroncin', id: '1481187002991906947', min: 1_000, max: 900_000, emoji: '🦐' },
   { name: 'Believer', id: '1481092832088424621', min: 1_000_000, max: 3_000_000, emoji: '💎' },
   { name: 'Ballenita', id: '1481092950191767733', min: 3_000_000, max: 6_000_000, emoji: '🐋' },
   { name: 'Doggyllonario', id: '1481093065396453396', min: 6_000_000, max: 100_000_000, emoji: '🚀' },
+];
+
+const BURN_ROLES = [
+  { name: 'Bronce', id: '1481095287584985270', min: 10_000, max: 100_000, emoji: '🥉' },
+  { name: 'Plata', id: '1481095408389328957', min: 100_000, max: 1_000_000, emoji: '🥈' },
+  { name: 'Oro', id: '1481095552224723066', min: 1_000_000, max: Infinity, emoji: '🥇' },
 ];
 
 export default function Home() {
@@ -25,7 +31,8 @@ export default function Home() {
   const [assigningRole, setAssigningRole] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [assignedRole, setAssignedRole] = useState('');
+  const [assignedHolderRole, setAssignedHolderRole] = useState('');
+  const [assignedBurnRole, setAssignedBurnRole] = useState('');
 
   // Get Discord ID and Channel ID from URL
   useEffect(() => {
@@ -98,9 +105,9 @@ export default function Home() {
     }
   }, [publicKey, connection]);
 
-  const getRole = () => {
+  const getHolderRole = () => {
     if (balance === null) return null;
-    for (const r of ROLES) {
+    for (const r of HOLDER_ROLES) {
       if (balance >= r.min && balance < r.max) {
         return r;
       }
@@ -114,11 +121,7 @@ export default function Home() {
       return;
     }
 
-    const role = getRole();
-    if (!role) {
-      setError('No tienes suficientes DOGGY para obtener un rol');
-      return;
-    }
+    const holderRole = getHolderRole();
 
     setAssigningRole(true);
     setError(null);
@@ -150,7 +153,7 @@ export default function Home() {
         body: JSON.stringify({
           wallet: publicKey.toBase58(),
           discordId: discordId,
-          channelId: channelId, // Pass channel ID for confirmation message
+          channelId: channelId,
           signature: Array.from(signature),
         }),
       });
@@ -191,7 +194,8 @@ export default function Home() {
       // Check if successful
       if (response.ok && result.success) {
         setSuccess(true);
-        setAssignedRole(result.role);
+        setAssignedHolderRole(result.holderRole || '');
+        setAssignedBurnRole(result.burnRole || '');
       } else {
         setError(result.error || 'Error al asignar rol');
         setAssigningRole(false);
@@ -203,7 +207,7 @@ export default function Home() {
     }
   };
 
-  const role = getRole();
+  const holderRole = getHolderRole();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center justify-center p-8">
@@ -261,16 +265,16 @@ export default function Home() {
                     {balance.toLocaleString()} DOGGY
                   </p>
                   
-                  {role ? (
+                  {holderRole ? (
                     <div className="bg-green-900/30 border border-green-700 rounded-lg p-4 mt-4">
-                      <p className="text-green-400 text-sm">Rol que obtendrás:</p>
+                      <p className="text-green-400 text-sm">Rol de Holder que obtendrás:</p>
                       <p className="text-3xl font-bold text-white mt-2">
-                        {role.emoji} {role.name}
+                        {holderRole.emoji} {holderRole.name}
                       </p>
                     </div>
                   ) : (
                     <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 mt-4">
-                      <p className="text-red-400 text-sm">❌ No tienes suficientes DOGGY</p>
+                      <p className="text-red-400 text-sm">❌ No tienes suficientes DOGGY para rol de Holder</p>
                       <p className="text-white text-sm mt-2">
                         Mínimo requerido: 1,000 DOGGY
                       </p>
@@ -294,7 +298,7 @@ export default function Home() {
             )}
 
             {/* Assign Role Button */}
-            {!loading && !error && role && !success && (
+            {!loading && !error && holderRole && !success && (
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
                 <h3 className="text-xl font-bold text-white mb-4 text-center">
                   Paso 2: Obtener Rol en Discord
@@ -307,7 +311,7 @@ export default function Home() {
                   disabled={assigningRole}
                   className="w-full px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {assigningRole ? '⏳ Asignando Rol...' : `🎯 Asignar Rol ${role.emoji} ${role.name}`}
+                  {assigningRole ? '⏳ Verificando...' : '🎯 Verificar y Asignar Roles'}
                 </button>
                 <p className="text-gray-500 text-sm mt-4 text-center">
                   Wallet: {publicKey?.toBase58().slice(0, 8)}...{publicKey?.toBase58().slice(-8)}
@@ -320,10 +324,31 @@ export default function Home() {
               <div className="bg-green-900/20 backdrop-blur-sm rounded-2xl p-8 border border-green-700 text-center">
                 <div className="text-6xl mb-4">🎉</div>
                 <h2 className="text-2xl font-bold text-white mb-4">¡Verificación Completa!</h2>
-                <p className="text-gray-300 mb-4">
-                  Tu rol <span className="font-bold text-blue-400">@{assignedRole}</span> ha sido asignado en Discord
-                </p>
-                <p className="text-gray-400 text-sm">
+                
+                <div className="space-y-4">
+                  {assignedHolderRole && (
+                    <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4">
+                      <p className="text-blue-400 text-sm">Rol de Holder:</p>
+                      <p className="text-2xl font-bold text-white">{assignedHolderRole}</p>
+                    </div>
+                  )}
+                  
+                  {assignedBurnRole && (
+                    <div className="bg-orange-900/30 border border-orange-700 rounded-lg p-4">
+                      <p className="text-orange-400 text-sm">Rol de Burner:</p>
+                      <p className="text-2xl font-bold text-white">{assignedBurnRole}</p>
+                    </div>
+                  )}
+                  
+                  {!assignedBurnRole && (
+                    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+                      <p className="text-gray-400 text-sm">🔥 No has quemado DOGGY</p>
+                      <p className="text-gray-500 text-xs mt-2">Quema DOGGY para obtener roles de burner</p>
+                    </div>
+                  )}
+                </div>
+                
+                <p className="text-gray-400 text-sm mt-6">
                   ✅ Se ha enviado confirmación al canal de Discord
                 </p>
                 <p className="text-gray-500 text-sm mt-4">
@@ -335,9 +360,9 @@ export default function Home() {
             {/* Roles Info */}
             {!success && !loading && (
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700">
-                <h3 className="text-lg font-bold text-white mb-4">💎 Roles Disponibles</h3>
+                <h3 className="text-lg font-bold text-white mb-4">💎 Roles de Holder Disponibles</h3>
                 <div className="space-y-2 text-sm">
-                  {ROLES.map((r) => (
+                  {HOLDER_ROLES.map((r) => (
                     <div key={r.name} className="flex justify-between items-center p-2 bg-gray-700/50 rounded">
                       <span>{r.emoji} {r.name}</span>
                       <span className="text-blue-400 font-bold">
