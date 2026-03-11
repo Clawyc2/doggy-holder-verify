@@ -4,11 +4,11 @@ const DISCORD_TOKEN = process.env.DISCORD_BOT_TOKEN!;
 const GUILD_ID = process.env.DISCORD_GUILD_ID!;
 const RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
 
-// Roles de Holder (nuevos)
+// Roles de Holder con IDs directos
 const HOLDER_ROLES = [
-  { name: 'Believer', min: 1_000_000, max: 3_000_000 },
-  { name: 'Ballenita', min: 3_000_000, max: 6_000_000 },
-  { name: 'Doggyllonario', min: 6_000_000, max: 10_000_000 },
+  { name: 'Believer', id: '1481092832088424621', min: 1_000_000, max: 3_000_000 },
+  { name: 'Ballenita', id: '1481092950191767733', min: 3_000_000, max: 6_000_000 },
+  { name: 'Doggyllonario', id: '1481093065396453396', min: 6_000_000, max: 10_000_000 },
 ];
 
 // Discord API helper
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     let role = null;
     for (const r of HOLDER_ROLES) {
       if (balance >= r.min && balance < r.max) {
-        role = r.name;
+        role = r;
         break;
       }
     }
@@ -97,38 +97,25 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Get all roles from Discord
-    const roles = await discordAPI(`/guilds/${GUILD_ID}/roles`);
-    const targetRole = roles.find((r: any) => r.name === role);
-
-    if (!targetRole) {
-      return NextResponse.json({ 
-        error: `Rol "${role}" no encontrado en Discord` 
-      }, { status: 404 });
-    }
-
     // Remove old holder roles
     for (const r of HOLDER_ROLES) {
-      const oldRole = roles.find((ro: any) => ro.name === r.name);
-      if (oldRole) {
-        try {
-          await discordAPI(`/guilds/${GUILD_ID}/members/${discordId}/roles/${oldRole.id}`, 'DELETE');
-          console.log(`❌ Removido rol ${r.name}`);
-        } catch (e) {
-          // Ignore if user doesn't have the role
-        }
+      try {
+        await discordAPI(`/guilds/${GUILD_ID}/members/${discordId}/roles/${r.id}`, 'DELETE');
+        console.log(`❌ Removido rol ${r.name}`);
+      } catch (e) {
+        // Ignore if user doesn't have the role
       }
     }
 
     // Add new role
-    await discordAPI(`/guilds/${GUILD_ID}/members/${discordId}/roles/${targetRole.id}`, 'PUT');
-    console.log(`✅ Rol ${role} asignado a ${discordId}`);
+    await discordAPI(`/guilds/${GUILD_ID}/members/${discordId}/roles/${role.id}`, 'PUT');
+    console.log(`✅ Rol ${role.name} asignado a ${discordId}`);
 
     return NextResponse.json({ 
       success: true,
-      role: role,
+      role: role.name,
       balance: balance,
-      message: `¡Rol ${role} asignado!`
+      message: `¡Rol ${role.name} asignado!`
     });
 
   } catch (error: any) {
