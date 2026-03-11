@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { WalletMultiButton, useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { PublicKey } from "@solana/web3.js";
 
 const DOGGY_MINT = 'BS7HxRitaY5ipGfbek1nmatWLbaS9yoWRSEQzCb3pump';
@@ -21,8 +21,9 @@ const BURN_ROLES = [
 ];
 
 export default function Home() {
-  const { publicKey, connected, signMessage } = useWallet();
+  const { publicKey, connected, signMessage, disconnect } = useWallet();
   const { connection } = useConnection();
+  const { setVisible } = useWalletModal();
   const [discordId, setDiscordId] = useState<string>('');
   const [channelId, setChannelId] = useState<string>('');
   const [balance, setBalance] = useState<number | null>(null);
@@ -33,6 +34,20 @@ export default function Home() {
   const [success, setSuccess] = useState(false);
   const [assignedHolderRole, setAssignedHolderRole] = useState('');
   const [assignedBurnRole, setAssignedBurnRole] = useState('');
+  const [showWalletMenu, setShowWalletMenu] = useState(false);
+  const walletMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close wallet menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (walletMenuRef.current && !walletMenuRef.current.contains(event.target as Node)) {
+        setShowWalletMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Get Discord ID and Channel ID from URL
   useEffect(() => {
@@ -209,8 +224,67 @@ export default function Home() {
 
   const holderRole = getHolderRole();
 
+  const handleDisconnect = () => {
+    disconnect();
+    setShowWalletMenu(false);
+    setBalance(null);
+    setError(null);
+    setSuccess(false);
+  };
+
+  const handleChangeWallet = () => {
+    setVisible(true);
+    setShowWalletMenu(false);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center justify-center p-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center justify-center p-8 relative">
+      {/* Wallet Button (Top Right) */}
+      {connected && publicKey && (
+        <div className="fixed top-4 right-4 z-50" ref={walletMenuRef}>
+          <button
+            onClick={() => setShowWalletMenu(!showWalletMenu)}
+            className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-4 py-2 flex items-center gap-2 transition"
+          >
+            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+            <span className="text-white text-sm font-mono">
+              {publicKey.toBase58().slice(0, 4)}...{publicKey.toBase58().slice(-4)}
+            </span>
+            <svg 
+              className={`w-4 h-4 text-gray-400 transition-transform ${showWalletMenu ? 'rotate-180' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          
+          {/* Dropdown Menu */}
+          {showWalletMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden">
+              <button
+                onClick={handleChangeWallet}
+                className="w-full px-4 py-3 text-left text-white hover:bg-gray-700 transition flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                Cambiar wallet
+              </button>
+              <button
+                onClick={handleDisconnect}
+                className="w-full px-4 py-3 text-left text-red-400 hover:bg-gray-700 transition flex items-center gap-2 border-t border-gray-700"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Desconectar
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       <div className="max-w-2xl w-full">
         {/* Header */}
         <div className="text-center mb-12">
