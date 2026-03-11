@@ -18,6 +18,7 @@ body {
     rgb(var(--background-start-rgb));
 }
 
+/* Wallet Adapter Styles */
 .wallet-adapter-button {
   background: #FF6B35 !important;
   border-radius: 8px !important;
@@ -26,4 +27,24 @@ body {
 
 .wallet-adapter-button:hover {
   background: #ff8555 !important;
+}
+
+/* Fix dropdown z-index - put it above everything */
+.wallet-adapter-dropdown-list {
+  z-index: 9999 !important;
+  position: fixed !important;
+}
+
+.wallet-adapter-dropdown {
+  position: relative !important;
+  z-index: 100 !important;
+}
+
+/* Ensure dropdown list is always visible */
+.wallet-adapter-modal-wrapper {
+  z-index: 10000 !important;
+}
+
+.wallet-adapter-modal-container {
+  z-index: 10001 !important;
 }

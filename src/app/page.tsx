@@ -22,7 +22,7 @@ export default function VerifyPage() {
       const result = await verifyTokenHoldings(publicKey.toBase58());
       setVerification(result);
     } catch (err) {
-      setError("Error verifying wallet. Please try again.");
+      setError("Error al verificar la wallet. Por favor intenta de nuevo.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -41,22 +41,22 @@ export default function VerifyPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-white mb-4">
-            🐕 Doggy Holder Verification
+            🐕 Verificación Doggy
           </h1>
           <p className="text-gray-400 text-lg">
-            Verify your $DOGGY holdings and burns to unlock Discord roles
+            Verifica tus holdings de $DOGGY para desbloquear roles en Discord
           </p>
         </div>
 
         {/* Wallet Connection */}
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 mb-6">
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 mb-6 relative z-50">
           <div className="flex justify-center mb-6">
             <WalletMultiButton />
           </div>
 
           {publicKey && (
             <div className="text-center text-gray-400 text-sm">
-              Connected: {publicKey.toBase58().slice(0, 8)}...{publicKey.toBase58().slice(-8)}
+              Conectado: {publicKey.toBase58().slice(0, 8)}...{publicKey.toBase58().slice(-8)}
             </div>
           )}
         </div>
@@ -65,7 +65,7 @@ export default function VerifyPage() {
         {loading && (
           <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-doggy-primary mx-auto mb-4"></div>
-            <p className="text-white">Verifying your wallet...</p>
+            <p className="text-white">Verificando tu wallet...</p>
           </div>
         )}
 
@@ -77,7 +77,7 @@ export default function VerifyPage() {
               onClick={verifyWallet}
               className="mt-4 px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
             >
-              Try Again
+              Intentar de nuevo
             </button>
           </div>
         )}
@@ -106,7 +106,7 @@ export default function VerifyPage() {
               </div>
               {verification.isHolder && (
                 <p className="text-green-400 mt-4">
-                  ✨ You qualify for the HOLDER role!
+                  ✨ ¡Calificas para el rol HOLDER!
                 </p>
               )}
             </div>
@@ -119,7 +119,7 @@ export default function VerifyPage() {
             }`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Burned</p>
+                  <p className="text-gray-400 text-sm mb-1">Quemados</p>
                   <p className="text-3xl font-bold text-white">
                     {formatTokenAmount(verification.burned)} DOGGY
                   </p>
@@ -132,7 +132,7 @@ export default function VerifyPage() {
               </div>
               {verification.hasBurned && (
                 <p className="text-orange-400 mt-4">
-                  🔥 You qualify for the BURNER role!
+                  🔥 ¡Calificas para el rol BURNER!
                 </p>
               )}
             </div>
@@ -141,13 +141,13 @@ export default function VerifyPage() {
             {(verification.isHolder || verification.hasBurned) && (
               <div className="bg-blue-900/20 backdrop-blur-sm rounded-2xl p-8 border border-blue-700">
                 <h3 className="text-xl font-bold text-white mb-4">
-                  📋 Next Steps
+                  📋 Siguientes pasos
                 </h3>
                 <ol className="text-gray-300 space-y-2">
-                  <li>1. You've verified ownership of this wallet</li>
-                  <li>2. Copy your wallet address below</li>
-                  <li>3. Use <code className="bg-gray-800 px-2 py-1 rounded">/verify</code> in Discord</li>
-                  <li>4. Paste your wallet address when prompted</li>
+                  <li>1. Has verificado la propiedad de esta wallet</li>
+                  <li>2. Copia tu dirección de wallet abajo</li>
+                  <li>3. Usa <code className="bg-gray-800 px-2 py-1 rounded">/verify</code> en Discord</li>
+                  <li>4. Pega tu dirección de wallet cuando te lo pida</li>
                 </ol>
                 <div className="mt-4 p-4 bg-gray-800 rounded-lg">
                   <code className="text-doggy-primary break-all">
@@ -163,36 +163,41 @@ export default function VerifyPage() {
         {!connected && (
           <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
             <h3 className="text-xl font-bold text-white mb-4">
-              How it works
+              Cómo funciona
             </h3>
             <ol className="text-gray-300 space-y-3">
               <li className="flex items-start">
                 <span className="bg-doggy-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-0.5">1</span>
-                Connect your Solana wallet
+                Conecta tu wallet de Solana
               </li>
               <li className="flex items-start">
                 <span className="bg-doggy-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-0.5">2</span>
-                We verify your DOGGY holdings and burns
+                Verificamos tus holdings de DOGGY
               </li>
               <li className="flex items-start">
                 <span className="bg-doggy-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-0.5">3</span>
-                Get your verification code for Discord
+                Obtén tu código de verificación para Discord
               </li>
             </ol>
+            <div className="mt-6 p-4 bg-yellow-900/20 border border-yellow-700 rounded-lg">
+              <p className="text-yellow-400 text-sm">
+                ⚠️ La firma de este mensaje solo demostrará que eres el propietario de la cuenta seleccionada.
+              </p>
+            </div>
           </div>
         )}
       </div>
 
       {/* Footer */}
       <div className="mt-12 text-gray-500 text-sm">
-        Built with ❤️ by Clawy •{" "}
+        Creado con ❤️ por Clawy •{" "}
         <a
           href="https://solscan.io/token/BS7HxRitaY5ipGfbek1nmatWLbaS9yoWRSEQzCb3pump"
           target="_blank"
           rel="noopener noreferrer"
           className="text-doggy-primary hover:underline"
         >
-          View DOGGY on Solscan
+          Ver DOGGY en Solscan
         </a>
       </div>
     </div>
