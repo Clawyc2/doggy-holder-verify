@@ -4,11 +4,12 @@ const DISCORD_TOKEN = process.env.DISCORD_BOT_TOKEN!;
 const GUILD_ID = process.env.DISCORD_GUILD_ID!;
 const RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
 
-// Roles de Holder con IDs directos
+// Roles de Holder con IDs directos (ordenados de menor a mayor)
 const HOLDER_ROLES = [
+  { name: 'Camaroncin', id: '1481187002991906947', min: 1_000, max: 900_000 },
   { name: 'Believer', id: '1481092832088424621', min: 1_000_000, max: 3_000_000 },
   { name: 'Ballenita', id: '1481092950191767733', min: 3_000_000, max: 6_000_000 },
-  { name: 'Doggyllonario', id: '1481093065396453396', min: 6_000_000, max: 10_000_000 },
+  { name: 'Doggyllonario', id: '1481093065396453396', min: 6_000_000, max: 100_000_000 },
 ];
 
 // Discord API helper
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     if (!role) {
       return NextResponse.json({ 
-        error: `Necesitas mínimo 1M DOGGY para obtener un rol. Tienes: ${balance.toLocaleString()} DOGGY`,
+        error: `Necesitas mínimo 1,000 DOGGY para obtener un rol. Tienes: ${balance.toLocaleString()} DOGGY`,
         balance 
       }, { status: 400 });
     }

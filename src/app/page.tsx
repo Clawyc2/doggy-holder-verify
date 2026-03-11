@@ -186,21 +186,25 @@ export default function Home() {
             </h3>
             <div className="space-y-3 text-gray-300">
               <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded">
-                <span>• Believer</span>
+                <span>🦐 Camaroncin</span>
+                <span className="text-doggy-primary font-bold">1K – 900K DOGGY</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded">
+                <span>💎 Believer</span>
                 <span className="text-doggy-primary font-bold">1M – 3M DOGGY</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded">
-                <span>• Ballenita</span>
+                <span>🐋 Ballenita</span>
                 <span className="text-doggy-primary font-bold">3M – 6M DOGGY</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded">
-                <span>• Doggyllonario</span>
-                <span className="text-doggy-primary font-bold">6M – 10M DOGGY</span>
+                <span>🚀 Doggyllonario</span>
+                <span className="text-doggy-primary font-bold">6M+ DOGGY</span>
               </div>
             </div>
             <div className="mt-6 bg-blue-900/20 border border-blue-700 rounded-lg p-4">
               <p className="text-blue-400 text-sm">
-                📌 Mínimo requerido: 1,000,000 DOGGY para obtener el primer rol.
+                📌 Mínimo requerido: 1,000 DOGGY para obtener el primer rol.
               </p>
             </div>
           </div>
