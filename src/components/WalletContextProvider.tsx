@@ -4,7 +4,6 @@ import { FC, ReactNode, useMemo } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
-import { clusterApiUrl } from "@solana/web3.js";
 
 require("@solana/wallet-adapter-react-ui/styles.css");
 
@@ -13,7 +12,13 @@ interface Props {
 }
 
 export const WalletContextProvider: FC<Props> = ({ children }) => {
-  const endpoint = useMemo(() => clusterApiUrl("mainnet-beta"), []);
+  // Use Helius RPC for better reliability (same as backend)
+  // Fallback to public RPC if env var not set
+  const endpoint = useMemo(() => 
+    process.env.NEXT_PUBLIC_RPC_URL || 
+    'https://mainnet.helius-rpc.com/?api-key=b534340e-8d88-4146-9bef-bb2140de44d7',
+    []
+  );
   
   const wallets = useMemo(
     () => [
