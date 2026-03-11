@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { verifyTokenHoldings, formatTokenAmount } from "@/lib/tokenVerification";
 
 export default function Home() {
-  const { publicKey, connected } = useWallet();
+  const { publicKey, connected, signMessage } = useWallet();
   const [discordId, setDiscordId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -24,8 +25,8 @@ export default function Home() {
     }
   }, []);
 
-  const handleVerify = async () => {
-    if (!publicKey || !discordId) {
+  const handleVerify = useCallback(async () => {
+    if (!publicKey || !discordId || !signMessage) {
       setError("Wallet o Discord no detectados");
       return;
     }
@@ -34,13 +35,31 @@ export default function Home() {
     setError(null);
 
     try {
-      // Call our Vercel API
+      // Step 1: Sign message to prove wallet ownership
+      const message = new TextEncoder().encode(
+        `Verify DOGGY holdings for Discord role\n` +
+        `Discord ID: ${discordId}\n` +
+        `Timestamp: ${Date.now()}\n` +
+        `This signature only proves wallet ownership. No transactions will be made.`
+      );
+
+      let signature: Uint8Array;
+      try {
+        signature = await signMessage(message);
+      } catch (signError: any) {
+        setError("Firma rechazada. Necesitas firmar el mensaje para continuar.");
+        setLoading(false);
+        return;
+      }
+
+      // Step 2: Call API to verify and assign role
       const response = await fetch('/api/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wallet: publicKey.toBase58(),
           discordId: discordId,
+          signature: Array.from(signature),
         }),
       });
 
@@ -59,14 +78,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Auto-verify when wallet connects
-  useEffect(() => {
-    if (connected && publicKey && discordId && !success && !loading) {
-      handleVerify();
-    }
-  }, [connected, publicKey, discordId]);
+  }, [publicKey, discordId, signMessage]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center justify-center p-8">
@@ -90,20 +102,45 @@ export default function Home() {
           </div>
         )}
 
-        {/* Loading State */}
+        {/* Step 1: Connect Wallet */}
         {verifying && !connected && !success && (
           <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 text-center mb-6">
-            <h3 className="text-xl font-bold text-white mb-4">Step 1: Connect Wallet</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Step 1: Connect Wallet</h3>
+            <p className="text-gray-400 mb-6">Connect your Solana wallet to continue</p>
             <div className="flex justify-center mb-6 relative z-50">
               <WalletMultiButton />
             </div>
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-500 text-sm">
               Discord ID: {discordId}
             </p>
           </div>
         )}
 
-        {/* Verifying State */}
+        {/* Step 2: Sign & Verify */}
+        {verifying && connected && !loading && !success && (
+          <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 text-center mb-6">
+            <h3 className="text-xl font-bold text-white mb-2">Step 2: Verify Holdings</h3>
+            <p className="text-gray-400 mb-6">
+              Click the button below to sign a message and verify your DOGGY balance.
+            </p>
+            <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-4 mb-6">
+              <p className="text-yellow-400 text-sm">
+                🔒 You will be asked to sign a message. This only proves wallet ownership. No transactions will be made.
+              </p>
+            </div>
+            <button
+              onClick={handleVerify}
+              className="px-8 py-3 bg-doggy-primary hover:bg-doggy-accent text-white font-bold rounded-lg transition"
+            >
+              🎯 Verify & Get Role
+            </button>
+            <p className="text-gray-500 text-sm mt-4">
+              Connected: {publicKey?.toBase58().slice(0, 8)}...{publicKey?.toBase58().slice(-8)}
+            </p>
+          </div>
+        )}
+
+        {/* Loading State */}
         {loading && (
           <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 text-center mb-6">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-doggy-primary mx-auto mb-4"></div>
@@ -161,11 +198,6 @@ export default function Home() {
                 <span>• DoggyMaxi</span>
                 <span className="text-doggy-primary font-bold">500K+ DOGGY</span>
               </div>
-            </div>
-            <div className="mt-6 bg-yellow-900/20 border border-yellow-700 rounded-lg p-4">
-              <p className="text-yellow-400 text-sm">
-                🔒 This process only reads your DOGGY balance. No transactions are made.
-              </p>
             </div>
           </div>
         )}

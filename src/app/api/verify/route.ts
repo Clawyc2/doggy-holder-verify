@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Connection, PublicKey } from '@solana/web3.js';
 
 const DISCORD_TOKEN = process.env.DISCORD_BOT_TOKEN!;
 const GUILD_ID = process.env.DISCORD_GUILD_ID!;
-const DOGGY_TOKEN_MINT = 'BS7HxRitaY5ipGfbek1nmatWLbaS9yoWRSEQzCb3pump';
+const RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
 
 const ROLES = [
   { name: 'DoggyHolder', min: 1_000, max: 100_000 },
@@ -31,37 +30,53 @@ async function discordAPI(endpoint: string, method: string = 'GET', body?: any) 
   return res.json();
 }
 
+// Get token balance from Solana
+async function getTokenBalance(wallet: string, mint: string): Promise<number> {
+  try {
+    const response = await fetch(RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 'doggy-verify',
+        method: 'getTokenAccountsByOwner',
+        params: [
+          wallet,
+          { mint: mint },
+          { encoding: 'jsonParsed' }
+        ]
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.result && data.result.value && data.result.value.length > 0) {
+      const balance = data.result.value[0].account.data.parsed.info.tokenAmount.uiAmount;
+      return balance || 0;
+    }
+    
+    return 0;
+  } catch (error) {
+    console.error('Error getting balance:', error);
+    throw new Error('Failed to verify balance. Please try again in a moment.');
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { wallet, discordId } = await request.json();
+    const { wallet, discordId, signature } = await request.json();
 
     if (!wallet || !discordId) {
       return NextResponse.json({ 
-        error: 'Falta wallet o discordId' 
+        error: 'Missing wallet or discordId' 
       }, { status: 400 });
     }
 
     console.log(`🔍 Verificando: ${discordId} - ${wallet}`);
 
     // Verify holdings on-chain
-    const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
-    
-    const tokenAccounts = await connection.getParsedProgramAccounts(
-      new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-      {
-        filters: [
-          { dataSize: 165 },
-          { memcmp: { offset: 32, bytes: wallet } },
-          { memcmp: { offset: 0, bytes: DOGGY_TOKEN_MINT } },
-        ],
-      }
-    );
-
-    let balance = 0;
-    if (tokenAccounts.length > 0) {
-      const accountInfo: any = tokenAccounts[0].account;
-      balance = accountInfo.data.parsed.info.tokenAmount.uiAmount || 0;
-    }
+    const DOGGY_MINT = 'BS7HxRitaY5ipGfbek1nmatWLbaS9yoWRSEQzCb3pump';
+    const balance = await getTokenBalance(wallet, DOGGY_MINT);
 
     console.log(`💎 Balance: ${balance} DOGGY`);
 
