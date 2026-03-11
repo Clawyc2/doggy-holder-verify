@@ -18,6 +18,7 @@ export default function Home() {
   const { publicKey, connected, signMessage } = useWallet();
   const { connection } = useConnection();
   const [discordId, setDiscordId] = useState<string>('');
+  const [channelId, setChannelId] = useState<string>('');
   const [balance, setBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -26,13 +27,17 @@ export default function Home() {
   const [success, setSuccess] = useState(false);
   const [assignedRole, setAssignedRole] = useState('');
 
-  // Get Discord ID from URL
+  // Get Discord ID and Channel ID from URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const discordParam = params.get('discord');
+    const channelParam = params.get('channel');
     if (discordParam) {
       setDiscordId(discordParam);
       setVerifying(true);
+    }
+    if (channelParam) {
+      setChannelId(channelParam);
     }
   }, []);
 
@@ -145,28 +150,45 @@ export default function Home() {
         body: JSON.stringify({
           wallet: publicKey.toBase58(),
           discordId: discordId,
+          channelId: channelId, // Pass channel ID for confirmation message
           signature: Array.from(signature),
         }),
       });
 
-      const text = await response.text();
-      console.log('📥 Response:', text);
+      console.log('📥 Response status:', response.status);
       
-      if (!text || text.trim() === '') {
+      // Try to read response as text first
+      let responseText = '';
+      try {
+        responseText = await response.text();
+        console.log('📥 Response text:', responseText);
+      } catch (readError) {
+        console.error('❌ Error reading response:', readError);
+        setError('Error al leer respuesta del servidor');
+        setAssigningRole(false);
+        return;
+      }
+
+      // Check if response is empty
+      if (!responseText || responseText.trim() === '') {
         setError('El servidor no respondió. Intenta de nuevo.');
         setAssigningRole(false);
         return;
       }
 
+      // Try to parse JSON
       let result;
       try {
-        result = JSON.parse(text);
+        result = JSON.parse(responseText);
+        console.log('📥 Parsed result:', result);
       } catch (parseError) {
+        console.error('❌ JSON parse error:', parseError);
         setError('Error al procesar respuesta del servidor');
         setAssigningRole(false);
         return;
       }
 
+      // Check if successful
       if (response.ok && result.success) {
         setSuccess(true);
         setAssignedRole(result.role);
@@ -285,7 +307,7 @@ export default function Home() {
                   disabled={assigningRole}
                   className="w-full px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {assigningRole ? 'Asignando Rol...' : `🎯 Asignar Rol ${role.emoji} ${role.name}`}
+                  {assigningRole ? '⏳ Asignando Rol...' : `🎯 Asignar Rol ${role.emoji} ${role.name}`}
                 </button>
                 <p className="text-gray-500 text-sm mt-4 text-center">
                   Wallet: {publicKey?.toBase58().slice(0, 8)}...{publicKey?.toBase58().slice(-8)}
@@ -297,12 +319,15 @@ export default function Home() {
             {success && (
               <div className="bg-green-900/20 backdrop-blur-sm rounded-2xl p-8 border border-green-700 text-center">
                 <div className="text-6xl mb-4">🎉</div>
-                <h2 className="text-2xl font-bold text-white mb-4">¡Rol Asignado!</h2>
+                <h2 className="text-2xl font-bold text-white mb-4">¡Verificación Completa!</h2>
                 <p className="text-gray-300 mb-4">
                   Tu rol <span className="font-bold text-blue-400">@{assignedRole}</span> ha sido asignado en Discord
                 </p>
                 <p className="text-gray-400 text-sm">
-                  ✅ Puedes cerrar esta página
+                  ✅ Se ha enviado confirmación al canal de Discord
+                </p>
+                <p className="text-gray-500 text-sm mt-4">
+                  Puedes cerrar esta página
                 </p>
               </div>
             )}
