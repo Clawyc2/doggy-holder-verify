@@ -45,7 +45,7 @@ export default function Home() {
       let signature: Uint8Array;
       try {
         signature = await signMessage(message);
-      } catch (signError: {
+      } catch (signError: any) {
         setError("Firma rechazada. Necesitas firmar el mensaje para continuar.");
         setLoading(false);
         return;
@@ -80,8 +80,8 @@ export default function Home() {
         setError(result.error || 'Error en la verificación');
         setLoading(false);
       }
-    } catch (err) {
-      setError(err.message || 'Error al verificar');
+    } catch (err: any) {
+      setError(err?.message || 'Error al verificar');
       setLoading(false);
     }
   }, [publicKey, discordId, signMessage]);
