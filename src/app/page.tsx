@@ -434,7 +434,7 @@ export default function Home() {
             {/* Roles Info */}
             {!success && !loading && (
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700">
-                <h3 className="text-lg font-bold text-white mb-4">💎 Roles de Holder Disponibles</h3>
+                <h3 className="text-lg font-bold mb-4" style={{color: 'white'}}>💎 Roles de Holder Disponibles</h3>
                 <div className="space-y-2 text-sm">
                   {HOLDER_ROLES.map((r) => (
                     <div key={r.name} className="flex justify-between items-center p-2 bg-gray-700/50 rounded">
