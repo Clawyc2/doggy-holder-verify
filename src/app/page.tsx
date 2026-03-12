@@ -438,7 +438,7 @@ export default function Home() {
                 <div className="space-y-2 text-sm">
                   {HOLDER_ROLES.map((r) => (
                     <div key={r.name} className="flex justify-between items-center p-2 bg-gray-700/50 rounded">
-                      <span>{r.emoji} {r.name}</span>
+                      <span style={{color: 'white'}}>{r.emoji} {r.name}</span>
                       <span className="text-blue-400 font-bold">
                         {r.min >= 1000000 ? `${r.min/1000000}M` : `${r.min/1000}K`}
                         {r.max < 100000000 ? ` - ${r.max >= 1000000 ? `${r.max/1000000}M` : `${r.max/1000}K`}` : '+'}
