@@ -143,10 +143,12 @@ export default function Home() {
 
     try {
       // Step 1: Sign message to prove wallet ownership
+      const timestamp = Date.now();
+
       const message = new TextEncoder().encode(
         `Verificar holdings de DOGGY para rol en Discord\n` +
         `Discord ID: ${discordId}\n` +
-        `Timestamp: ${Date.now()}\n` +
+        `Timestamp: ${timestamp}\n` +
         `Esta firma solo prueba propiedad de la wallet. No se realizarán transacciones.`
       );
 
@@ -170,6 +172,7 @@ export default function Home() {
           discordId: discordId,
           channelId: channelId,
           signature: Array.from(signature),
+          timestamp,
         }),
       });
 

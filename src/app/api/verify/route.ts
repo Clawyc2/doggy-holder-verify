@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { PublicKey } from '@solana/web3.js';
+import nacl from 'tweetnacl';
 
 const DISCORD_TOKEN = process.env.DISCORD_BOT_TOKEN!;
 const GUILD_ID = process.env.DISCORD_GUILD_ID!;
@@ -213,12 +215,55 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     
-    const { wallet, discordId, channelId } = body;
+    const { wallet, discordId, channelId, signature, timestamp } = body;
 
-    if (!wallet || !discordId) {
-      return NextResponse.json({ 
+    // 1. Campos requeridos
+    if (!wallet || !discordId || !signature || !timestamp) {
+      return NextResponse.json({
         success: false,
-        error: 'Missing wallet or discordId' 
+        error: 'Faltan campos requeridos (wallet, discordId, signature, timestamp)'
+      }, { status: 400 });
+    }
+
+    // 2. Formato válido de Discord ID
+    if (!/^\d{17,20}$/.test(discordId)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Discord ID inválido'
+      }, { status: 400 });
+    }
+
+    // 3. Firma no puede tener más de 2 minutos
+    if (Date.now() - timestamp > 120_000) {
+      return NextResponse.json({
+        success: false,
+        error: 'Firma expirada, intenta de nuevo desde Discord'
+      }, { status: 401 });
+    }
+
+    // 4. Verificar firma criptográfica
+    try {
+      const message = new TextEncoder().encode(
+        `Verificar holdings de DOGGY para rol en Discord\n` +
+        `Discord ID: ${discordId}\n` +
+        `Timestamp: ${timestamp}\n` +
+        `Esta firma solo prueba propiedad de la wallet. No se realizarán transacciones.`
+      );
+      const pubkeyBytes = new PublicKey(wallet).toBytes();
+      const sigBytes = new Uint8Array(signature);
+      const valid = nacl.sign.detached.verify(message, sigBytes, pubkeyBytes);
+
+      if (!valid) {
+        console.warn(`🚨 Firma inválida para wallet ${wallet} / discord ${discordId}`);
+        return NextResponse.json({
+          success: false,
+          error: 'Firma inválida. Debes conectar y firmar con tu propia wallet.'
+        }, { status: 401 });
+      }
+    } catch (e) {
+      return NextResponse.json({
+        success: false,
+        error: 'Error verificando firma. Wallet address inválida.'
       }, { status: 400 });
     }
 
@@ -295,17 +340,19 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Assigned burn role ${burnRole.name} to ${discordId}`);
     }
 
-    // Register wallet for snapshot (NEW - does not break anything)
+    // Registrar wallet verificada internamente
     try {
-      await fetch(`${process.env.NEXTAUTH_URL || 'https://doggy-holder-verify-peach.vercel.app'}/api/registry`, {
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/registry`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-secret': process.env.INTERNAL_SECRET || '',
+        },
         body: JSON.stringify({ discordId, wallet }),
       });
-      console.log(`✅ Wallet registered for snapshot`);
     } catch (e) {
-      console.error('⚠️ Could not register wallet (non-critical):', e);
-      // Don't fail the request if registry fails
+      console.error('Error registering wallet:', e);
+      // No romper el flujo si falla el registro
     }
 
     // Return success response
