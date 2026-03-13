@@ -42,8 +42,11 @@ export default function Home() {
   // Detect if mobile
   const isMobile = typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   
-  // Detect if inside Phantom browser
-  const isPhantomBrowser = typeof window !== 'undefined' && !!(window as any).solana?.isPhantom;
+  // Detect if inside Phantom browser (not extension on desktop)
+  // En desktop, window.solana.isPhantom es la extensión, no el browser
+  const isPhantomBrowser = typeof window !== 'undefined' && 
+    !!(window as any).solana?.isPhantom &&
+    isMobile; // Solo es Phantom browser si es móvil
   
   // Custom connect handler for mobile
   const handleConnectWallet = async () => {
