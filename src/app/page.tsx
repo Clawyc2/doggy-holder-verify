@@ -41,11 +41,22 @@ export default function Home() {
   // Detect if mobile
   const isMobile = typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   
+  // Detect if inside Phantom browser
+  const isPhantomBrowser = typeof window !== 'undefined' && !!(window as any).solana?.isPhantom;
+  
   // Custom connect handler for mobile
   const handleConnectWallet = async () => {
     try {
-      if (isMobile) {
-        // Abrir esta misma URL dentro del Phantom browser
+      if (isPhantomBrowser) {
+        // Dentro del Phantom browser — conectar directo sin modal
+        const provider = (window as any).solana;
+        const resp = await provider.connect();
+        console.log('✅ Connected via Phantom browser:', resp.publicKey.toString());
+        // El wallet adapter detecta window.solana automáticamente
+        // pero por si acaso forzamos la conexión también via adapter
+        await connect();
+      } else if (isMobile) {
+        // Mobile normal — abrir en Phantom browser
         const currentUrl = encodeURIComponent(window.location.href);
         const refUrl = encodeURIComponent(window.location.origin);
         const phantomBrowserLink = `https://phantom.app/ul/browse/${currentUrl}?ref=${refUrl}`;
@@ -337,8 +348,8 @@ export default function Home() {
             <h3 className="text-xl font-bold text-white mb-2">Paso 1: Conectar Wallet</h3>
             <p className="text-gray-400 mb-6">Conecta la wallet que tiene tus DOGGY</p>
             <div className="flex justify-center mb-6 relative z-50">
-              {isMobile ? (
-                // Mobile: Custom button that triggers deep link
+              {isPhantomBrowser || isMobile ? (
+                // Mobile or Phantom browser: Custom button
                 <button
                   onClick={handleConnectWallet}
                   className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-lg transition flex items-center gap-2"
@@ -346,7 +357,7 @@ export default function Home() {
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M21 12a9 9 0 11-9 9 9 9 01-9-9 9 9 009-9zm-9 13a1 1 0 100-2 1 1 0 000 2zm0-6a1 1 0 100-2 1 1 0 000 2z"/>
                   </svg>
-                  Abrir Phantom
+                  {isPhantomBrowser ? 'Conectar Wallet' : 'Abrir en Phantom'}
                 </button>
               ) : (
                 // Desktop: Use standard modal
