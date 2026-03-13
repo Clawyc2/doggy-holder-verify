@@ -103,91 +103,65 @@ async function getTokenBalance(wallet: string, mint: string): Promise<number> {
   }
 }
 
-// NEW: Get burned tokens for a wallet
+// Get burned tokens using Helius Enhanced API
 async function getBurnedAmount(wallet: string): Promise<number> {
-  try {
-    const DOGGY_MINT = 'BS7HxRitaY5ipGfbek1nmatWLbaS9yoWRSEQzCb3pump';
-    
-    // Get signatures for this wallet
-    const signaturesResponse = await fetch(RPC_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 'doggy-burns',
-        method: 'getSignaturesForAddress',
-        params: [wallet, { limit: 100 }] // Last 100 transactions
-      })
-    });
+  const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
+  
+  if (!HELIUS_API_KEY) {
+    console.error('❌ HELIUS_API_KEY not configured');
+    return 0;
+  }
 
-    const signaturesData = await signaturesResponse.json();
+  const DOGGY_MINT = 'BS7HxRitaY5ipGfbek1nmatWLbaS9yoWRSEQzCb3pump';
+
+  try {
+    // Use Helius Enhanced Transactions API - get ALL transactions (no type filter)
+    const url = `https://api.helius.xyz/v0/addresses/${wallet}/transactions?api-key=${HELIUS_API_KEY}`;
     
-    if (!signaturesData.result) {
+    console.log(`🔥 Fetching burns via Helius for ${wallet}...`);
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error(`Helius API error: ${response.status}`);
+      return 0;
+    }
+    
+    const transactions = await response.json();
+    
+    if (!Array.isArray(transactions)) {
+      console.error('Helius: Invalid response format');
       return 0;
     }
 
     let totalBurned = 0;
 
-    // Check each transaction
-    for (const sig of signaturesData.result) {
-      try {
-        const txResponse = await fetch(RPC_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: 'doggy-tx',
-            method: 'getTransaction',
-            params: [sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }]
-          })
-        });
-
-        const txData = await txResponse.json();
-        
-        if (!txData.result || !txData.result.meta) continue;
-
-        // Check if this transaction sent tokens to burn address
-        const postTokenBalances = txData.result.meta.postTokenBalances || [];
-        const preTokenBalances = txData.result.meta.preTokenBalances || [];
-        
-        // Look for transfers to burn address
-        for (let i = 0; i < postTokenBalances.length; i++) {
-          const postBalance = postTokenBalances[i];
-          
-          // Check if this is DOGGY token
-          if (postBalance.mint !== DOGGY_MINT) continue;
-          
-          // Find the corresponding pre-balance
-          const preBalance = preTokenBalances.find((pb: any) => 
-            pb.accountIndex === postBalance.accountIndex
-          );
-          
-          if (!preBalance) continue;
-          
-          // Check if this is the burn address
-          const accountKeys = txData.result.transaction.message.accountKeys;
-          const accountKey = accountKeys[postBalance.accountIndex];
-          
-          if (accountKey === BURN_ADDRESS) {
-            // This is a burn transaction - add the amount
-            const burnedAmount = (preBalance.uiTokenAmount.uiAmount || 0) - (postBalance.uiTokenAmount.uiAmount || 0);
-            if (burnedAmount > 0) {
-              totalBurned += burnedAmount;
+    // Look for transfers to burn address in ALL transactions
+    for (const tx of transactions) {
+      // Check token transfers
+      if (tx.tokenTransfers && Array.isArray(tx.tokenTransfers)) {
+        for (const transfer of tx.tokenTransfers) {
+          // Check if this is DOGGY sent to burn address
+          if (
+            transfer.mint === DOGGY_MINT &&
+            transfer.toUserAccount === BURN_ADDRESS
+          ) {
+            const amount = transfer.tokenAmount || 0;
+            if (amount > 0) {
+              totalBurned += amount;
+              console.log(`🔥 Found burn: ${amount} DOGGY in tx ${tx.signature}`);
             }
           }
         }
-      } catch (e) {
-        // Skip problematic transactions
-        continue;
       }
     }
 
-    console.log(`🔥 Total burned: ${totalBurned} DOGGY`);
+    console.log(`🔥 Total burned: ${totalBurned.toLocaleString()} DOGGY`);
     return totalBurned;
-    
+
   } catch (error: any) {
-    console.error('Error getting burned amount:', error);
-    return 0; // Return 0 if error - don't break the flow
+    console.error('Error fetching burns from Helius:', error);
+    return 0;
   }
 }
 
