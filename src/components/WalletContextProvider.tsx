@@ -28,27 +28,37 @@ export const WalletContextProvider: FC<Props> = ({ children }) => {
     return rpcUrl;
   }, []);
   
+  // Check if mobile
+  const isMobile = typeof window !== 'undefined' && 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
   const wallets = useMemo(
-    () => [
-      // Mobile wallet adapter - handles deep links automatically
-      new SolanaMobileWalletAdapter({
-        addressSelector: createDefaultAddressSelector(),
-        appIdentity: {
-          name: 'DOGGY Holder Verify',
-          uri: 'https://doggy-bot.vercel.app',
-        },
-        authorizationResultCache: createDefaultAuthorizationResultCache(),
-        cluster: 'mainnet-beta',
-        onWalletNotFound: async () => {
-          // If no wallet found, open Phantom app store page
-          window.open('https://phantom.app/', '_blank');
-        },
-      }),
-      // Desktop wallets
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-    ],
-    []
+    () => {
+      if (isMobile) {
+        // Mobile: Only mobile wallet adapter (no desktop wallets)
+        return [
+          new SolanaMobileWalletAdapter({
+            addressSelector: createDefaultAddressSelector(),
+            appIdentity: {
+              name: 'DOGGY Holder Verify',
+              uri: 'https://doggy-bot.vercel.app',
+            },
+            authorizationResultCache: createDefaultAuthorizationResultCache(),
+            cluster: 'mainnet-beta',
+            onWalletNotFound: async () => {
+              window.open('https://phantom.app/', '_blank');
+            },
+          }),
+        ];
+      } else {
+        // Desktop: Standard wallets
+        return [
+          new PhantomWalletAdapter(),
+          new SolflareWalletAdapter(),
+        ];
+      }
+    },
+    [isMobile]
   );
 
   return (
