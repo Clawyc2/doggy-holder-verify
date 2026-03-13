@@ -177,7 +177,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [publicKey, connection]);
+  }, [activeWalletAddress, connection]);
 
   const getHolderRole = () => {
     if (balance === null) return null;
