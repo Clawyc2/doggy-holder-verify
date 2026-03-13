@@ -118,8 +118,8 @@ async function getBurnedAmount(wallet: string): Promise<number> {
   const DOGGY_MINT = 'BS7HxRitaY5ipGfbek1nmatWLbaS9yoWRSEQzCb3pump';
 
   try {
-    // Use Helius Enhanced Transactions API
-    const url = `https://api.helius.xyz/v0/addresses/${wallet}/transactions?api-key=${HELIUS_API_KEY}`;
+    // Use Helius Enhanced Transactions API - filter by TRANSFER type only
+    const url = `https://api.helius.xyz/v0/addresses/${wallet}/transactions?api-key=${HELIUS_API_KEY}&type=TRANSFER`;
     
     console.log(`🔥 Fetching burns via Helius for ${wallet}...`);
     console.log(`🔑 Using API key: ${HELIUS_API_KEY.substring(0, 8)}...`);
