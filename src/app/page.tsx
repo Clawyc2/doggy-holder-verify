@@ -46,12 +46,7 @@ export default function Home() {
     try {
       if (isMobile) {
         // On mobile: Use wallet adapter which handles mobile protocol
-        // Find mobile wallet adapter and select it
-        const mobileWallet = wallets.find(w => w.name === 'Mobile');
-        if (mobileWallet) {
-          select(mobileWallet.name);
-        }
-        // Connect will trigger mobile wallet app
+        // Connect directly - adapter will handle mobile protocol
         await connect();
       } else {
         // On desktop: Open modal
