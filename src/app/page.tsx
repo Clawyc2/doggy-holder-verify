@@ -21,7 +21,7 @@ const BURN_ROLES = [
 ];
 
 export default function Home() {
-  const { publicKey, connected, signMessage, disconnect, connect, select, wallets } = useWallet();
+  const { publicKey, connected, signMessage, disconnect, connect } = useWallet();
   const { connection } = useConnection();
   const { setVisible } = useWalletModal();
   const [discordId, setDiscordId] = useState<string>('');
