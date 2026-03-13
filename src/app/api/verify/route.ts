@@ -105,17 +105,20 @@ async function getTokenBalance(wallet: string, mint: string): Promise<number> {
 
 // Get burned tokens using Helius Enhanced API
 async function getBurnedAmount(wallet: string): Promise<number> {
-  const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
+  // Extract Helius API key from NEXT_PUBLIC_RPC_URL
+  // Format: https://mainnet.helius-rpc.com/?api-key=XXXXX
+  const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || process.env.HELIUS_RPC_URL || process.env.SOLANA_RPC_URL;
+  const HELIUS_API_KEY = process.env.HELIUS_API_KEY || rpcUrl?.split('api-key=')[1]?.split('&')[0];
   
   if (!HELIUS_API_KEY) {
-    console.error('❌ HELIUS_API_KEY not configured');
+    console.error('❌ No Helius API key found in HELIUS_API_KEY or RPC URL');
     return 0;
   }
 
   const DOGGY_MINT = 'BS7HxRitaY5ipGfbek1nmatWLbaS9yoWRSEQzCb3pump';
 
   try {
-    // Use Helius Enhanced Transactions API - get ALL transactions (no type filter)
+    // Use Helius Enhanced Transactions API
     const url = `https://api.helius.xyz/v0/addresses/${wallet}/transactions?api-key=${HELIUS_API_KEY}`;
     
     console.log(`🔥 Fetching burns via Helius for ${wallet}...`);
