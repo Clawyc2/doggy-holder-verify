@@ -4,7 +4,11 @@ import { FC, ReactNode, useMemo } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
-import { SolanaMobileWalletAdapter } from "@solana-mobile/wallet-adapter-mobile";
+import { 
+  SolanaMobileWalletAdapter,
+  createDefaultAddressSelector,
+  createDefaultAuthorizationResultCache
+} from "@solana-mobile/wallet-adapter-mobile";
 
 require("@solana/wallet-adapter-react-ui/styles.css");
 
@@ -28,9 +32,16 @@ export const WalletContextProvider: FC<Props> = ({ children }) => {
     () => [
       // Mobile wallet adapter - handles deep links automatically
       new SolanaMobileWalletAdapter({
+        addressSelector: createDefaultAddressSelector(),
         appIdentity: {
           name: 'DOGGY Holder Verify',
           uri: 'https://doggy-bot.vercel.app',
+        },
+        authorizationResultCache: createDefaultAuthorizationResultCache(),
+        cluster: 'mainnet-beta',
+        onWalletNotFound: async () => {
+          // If no wallet found, open Phantom app store page
+          window.open('https://phantom.app/', '_blank');
         },
       }),
       // Desktop wallets
