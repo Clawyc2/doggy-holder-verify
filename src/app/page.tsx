@@ -28,6 +28,7 @@ export default function Home() {
   const [channelId, setChannelId] = useState<string>('');
   const [balance, setBalance] = useState<number | null>(null);
   const [burnedBalance, setBurnedBalance] = useState<number | null>(null);
+  const [walletPublicKey, setWalletPublicKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [assigningRole, setAssigningRole] = useState(false);
@@ -38,6 +39,9 @@ export default function Home() {
   const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const walletMenuRef = useRef<HTMLDivElement>(null);
+  
+  // Combined wallet address from adapter or local Phantom browser connection
+  const activeWalletAddress = publicKey?.toBase58() || walletPublicKey;
   
   // Detect if mobile
   const isMobile = typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -58,6 +62,8 @@ export default function Home() {
         if (provider && provider.connect) {
           const resp = await provider.connect();
           console.log('✅ Connected via Phantom browser:', resp.publicKey.toString());
+          // Guardar publicKey localmente
+          setWalletPublicKey(resp.publicKey.toString());
           // Forzar actualización del estado
           setIsConnected(true);
         } else {
@@ -114,15 +120,23 @@ export default function Home() {
       setIsConnected(false);
     }
   }, [connected, publicKey]);
+  
+  // Also fetch when walletPublicKey changes (Phantom browser)
+  useEffect(() => {
+    if (walletPublicKey && isPhantomBrowser) {
+      fetchBalance();
+    }
+  }, [walletPublicKey]);
 
   const fetchBalance = useCallback(async () => {
-    if (!publicKey) return;
+    // Usar activeWalletAddress que funciona tanto en adapter como Phantom browser
+    if (!activeWalletAddress) return;
     
     setLoading(true);
     setError(null);
     
     try {
-      console.log('🔍 Fetching DOGGY balance for:', publicKey.toBase58());
+      console.log('🔍 Fetching DOGGY balance for:', activeWalletAddress);
       
       // Get all token accounts for this wallet
       const tokenAccounts = await connection.getParsedProgramAccounts(
@@ -130,7 +144,7 @@ export default function Home() {
         {
           filters: [
             { dataSize: 165 },
-            { memcmp: { offset: 32, bytes: publicKey.toBase58() } },
+            { memcmp: { offset: 32, bytes: activeWalletAddress } },
           ],
         }
       );
@@ -176,7 +190,7 @@ export default function Home() {
   };
 
   const handleAssignRole = async () => {
-    if (!publicKey || !discordId || !signMessage) {
+    if (!activeWalletAddress || !discordId) {
       setError('Falta información para asignar rol');
       return;
     }
@@ -198,12 +212,32 @@ export default function Home() {
       );
 
       let signature: Uint8Array;
-      try {
-        signature = await signMessage(message);
-      } catch (signError: any) {
-        setError("Firma rechazada. Necesitas firmar el mensaje para continuar.");
-        setAssigningRole(false);
-        return;
+      
+      // En Phantom browser, usar window.solana directamente
+      if (isPhantomBrowser) {
+        try {
+          const provider = (window as any).solana;
+          const signResult = await provider.signMessage(message);
+          signature = signResult.signature;
+        } catch (signError: any) {
+          setError("Firma rechazada. Necesitas firmar el mensaje para continuar.");
+          setAssigningRole(false);
+          return;
+        }
+      } else {
+        // En desktop, usar el adapter
+        if (!signMessage) {
+          setError('Falta información para asignar rol');
+          setAssigningRole(false);
+          return;
+        }
+        try {
+          signature = await signMessage(message);
+        } catch (signError: any) {
+          setError("Firma rechazada. Necesitas firmar el mensaje para continuar.");
+          setAssigningRole(false);
+          return;
+        }
       }
 
       console.log('📤 Enviando solicitud de asignación de rol...');
@@ -213,7 +247,7 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          wallet: publicKey.toBase58(),
+          wallet: activeWalletAddress,
           discordId: discordId,
           channelId: channelId,
           signature: Array.from(signature),
@@ -288,6 +322,7 @@ export default function Home() {
       disconnect(); // forzar de todas formas
     } finally {
       setIsConnected(false); // forzar desconectado inmediatamente
+      setWalletPublicKey(null); // limpiar publicKey local
       setShowWalletMenu(false);
       setBalance(null);
       setError(null);
@@ -313,7 +348,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center justify-center p-8 relative">
       {/* Wallet Button (Top Right) */}
-      {isConnected && publicKey && (
+      {isConnected && activeWalletAddress && (
         <div className="fixed top-4 right-4 z-50" ref={walletMenuRef}>
           <button
             onClick={() => setShowWalletMenu(!showWalletMenu)}
@@ -321,7 +356,7 @@ export default function Home() {
           >
             <div className="w-2 h-2 rounded-full bg-green-500"></div>
             <span className="text-white text-sm font-mono">
-              {publicKey.toBase58().slice(0, 4)}...{publicKey.toBase58().slice(-4)}
+              {activeWalletAddress.slice(0, 4)}...{activeWalletAddress.slice(-4)}
             </span>
             <svg 
               className={`w-4 h-4 text-gray-400 transition-transform ${showWalletMenu ? 'rotate-180' : ''}`} 
@@ -476,7 +511,7 @@ export default function Home() {
                   {assigningRole ? '⏳ Verificando...' : '🎯 Verificar y Asignar Roles'}
                 </button>
                 <p className="text-gray-500 text-sm mt-4 text-center">
-                  Wallet: {publicKey?.toBase58().slice(0, 8)}...{publicKey?.toBase58().slice(-8)}
+                  Wallet: {activeWalletAddress?.slice(0, 8)}...{activeWalletAddress?.slice(-8)}
                 </p>
               </div>
             )}
