@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { WalletMultiButton, useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 
 const DOGGY_MINT = 'BS7HxRitaY5ipGfbek1nmatWLbaS9yoWRSEQzCb3pump';
@@ -21,7 +22,7 @@ const BURN_ROLES = [
 ];
 
 export default function Home() {
-  const { publicKey, connected, signMessage, disconnect } = useWallet();
+  const { publicKey, connected, signMessage, disconnect, connect } = useWallet();
   const { connection } = useConnection();
   const { setVisible } = useWalletModal();
   const [discordId, setDiscordId] = useState<string>('');
@@ -37,6 +38,24 @@ export default function Home() {
   const [assignedBurnRole, setAssignedBurnRole] = useState('');
   const [showWalletMenu, setShowWalletMenu] = useState(false);
   const walletMenuRef = useRef<HTMLDivElement>(null);
+  
+  // Detect if mobile
+  const isMobile = typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  // Custom connect handler for mobile
+  const handleConnectWallet = async () => {
+    try {
+      if (isMobile) {
+        // On mobile, connect directly - mobile adapter will handle deep links
+        await connect();
+      } else {
+        // On desktop, open modal
+        setVisible(true);
+      }
+    } catch (err) {
+      console.error('Connect error:', err);
+    }
+  };
 
   // Close wallet menu when clicking outside
   useEffect(() => {
@@ -316,7 +335,21 @@ export default function Home() {
             <h3 className="text-xl font-bold text-white mb-2">Paso 1: Conectar Wallet</h3>
             <p className="text-gray-400 mb-6">Conecta la wallet que tiene tus DOGGY</p>
             <div className="flex justify-center mb-6 relative z-50">
-              <WalletMultiButton />
+              {isMobile ? (
+                // Mobile: Custom button that triggers deep link
+                <button
+                  onClick={handleConnectWallet}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-lg transition flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M21 12a9 9 0 11-9 9 9 9 01-9-9 9 9 009-9zm-9 13a1 1 0 100-2 1 1 0 000 2zm0-6a1 1 0 100-2 1 1 0 000 2z"/>
+                  </svg>
+                  Conectar Phantom
+                </button>
+              ) : (
+                // Desktop: Use standard modal
+                <WalletMultiButton />
+              )}
             </div>
             <p className="text-gray-500 text-sm">
               Discord ID: {discordId}
