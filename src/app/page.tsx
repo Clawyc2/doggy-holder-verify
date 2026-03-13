@@ -45,10 +45,12 @@ export default function Home() {
   const handleConnectWallet = async () => {
     try {
       if (isMobile) {
-        // On mobile, connect directly - mobile adapter will handle deep links
-        await connect();
+        // On mobile: Use deep link to open Phantom app with current URL
+        const redirectUrl = encodeURIComponent(window.location.href);
+        const phantomDeepLink = `https://phantom.app/ul/browse/${redirectUrl}`;
+        window.location.href = phantomDeepLink;
       } else {
-        // On desktop, open modal
+        // On desktop: Open modal
         setVisible(true);
       }
     } catch (err) {
