@@ -122,28 +122,57 @@ async function getBurnedAmount(wallet: string): Promise<number> {
     const url = `https://api.helius.xyz/v0/addresses/${wallet}/transactions?api-key=${HELIUS_API_KEY}`;
     
     console.log(`🔥 Fetching burns via Helius for ${wallet}...`);
+    console.log(`🔑 Using API key: ${HELIUS_API_KEY.substring(0, 8)}...`);
     
     const response = await fetch(url);
     
     if (!response.ok) {
-      console.error(`Helius API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`Helius API error ${response.status}: ${errorText}`);
       return 0;
     }
     
     const transactions = await response.json();
     
+    console.log(`📦 Helius returned ${Array.isArray(transactions) ? transactions.length : 0} transactions`);
+    
+    // DEBUG: Log first transaction structure
+    if (Array.isArray(transactions) && transactions.length > 0) {
+      console.log(`🔍 First tx structure:`, JSON.stringify(transactions[0], null, 2));
+      console.log(`🔍 First tx keys:`, Object.keys(transactions[0]));
+      console.log(`🔍 tokenTransfers exists:`, 'tokenTransfers' in transactions[0]);
+      console.log(`🔍 nativeTransfers exists:`, 'nativeTransfers' in transactions[0]);
+    }
+    
     if (!Array.isArray(transactions)) {
-      console.error('Helius: Invalid response format');
+      console.error('Helius: Invalid response format - not an array');
+      console.error('Response:', JSON.stringify(transactions).substring(0, 500));
       return 0;
     }
 
     let totalBurned = 0;
+    let txChecked = 0;
+    let txWithTransfers = 0;
 
     // Look for transfers to burn address in ALL transactions
     for (const tx of transactions) {
+      txChecked++;
+      
       // Check token transfers
       if (tx.tokenTransfers && Array.isArray(tx.tokenTransfers)) {
+        txWithTransfers++;
         for (const transfer of tx.tokenTransfers) {
+          // Log ALL DOGGY transfers for debugging
+          if (transfer.mint === DOGGY_MINT) {
+            console.log(`🔍 DOGGY transfer found:`, {
+              from: transfer.fromUserAccount,
+              to: transfer.toUserAccount,
+              amount: transfer.tokenAmount,
+              burnAddress: BURN_ADDRESS,
+              matches: transfer.toUserAccount === BURN_ADDRESS
+            });
+          }
+          
           // Check if this is DOGGY sent to burn address
           if (
             transfer.mint === DOGGY_MINT &&
@@ -159,6 +188,7 @@ async function getBurnedAmount(wallet: string): Promise<number> {
       }
     }
 
+    console.log(`📊 Stats: ${txChecked} txs checked, ${txWithTransfers} with tokenTransfers`);
     console.log(`🔥 Total burned: ${totalBurned.toLocaleString()} DOGGY`);
     return totalBurned;
 
